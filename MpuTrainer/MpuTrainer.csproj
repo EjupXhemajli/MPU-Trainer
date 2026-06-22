@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>MpuTrainer</RootNamespace>
+    <AssemblyName>MpuTrainer</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Version>0.12.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Eingebettetes BfK-Logo -->
+    <None Remove="Assets\bfk-logo.png" />
+    <Resource Include="Assets\bfk-logo.png" />
+    <!-- App-/Fenster-Icon -->
+    <None Remove="Assets\app.ico" />
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- MVVM -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <!-- Dependency Injection -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <!-- Lokale Datenbank -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <!-- Audio (Aufnahme / Wiedergabe / Geraeteerkennung) -->
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <!-- MP3-Encoding -->
+    <PackageReference Include="NAudio.Lame" Version="2.1.0" />
+    <!-- Text-to-Speech (SAPI5) -->
+    <PackageReference Include="System.Speech" Version="8.0.0" />
+    <!-- Sichere Speicherung (DPAPI) -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <!-- DOCX-Textextraktion -->
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.1.0" />
+    <!-- PDF-Textextraktion -->
+    <PackageReference Include="PdfPig" Version="0.1.9" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,177 @@
+<Window x:Class="MpuTrainer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:MpuTrainer.ViewModels"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="MPU-Trainer - BfK" Height="820" Width="1280"
+        MinHeight="640" MinWidth="1024"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/app.ico"
+        Background="{StaticResource AppBackgroundBrush}">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="262"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Seitenleiste / Navigation (Anthrazit-Verlauf) -->
+        <Border Grid.Column="0">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="{StaticResource SidebarTopColor}" Offset="0"/>
+                    <GradientStop Color="{StaticResource SidebarColor}" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <DockPanel LastChildFill="False">
+                <!-- Logobereich (eingebettetes BfK-Logo) -->
+                <StackPanel DockPanel.Dock="Top" Margin="22,26,18,18">
+                    <Border Background="White" CornerRadius="14" Padding="16,13"
+                            HorizontalAlignment="Left">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="0" Opacity="0.18"/>
+                        </Border.Effect>
+                        <Image x:Name="LogoImage" Height="42" Stretch="Uniform"
+                               Source="/Assets/bfk-logo.png"/>
+                    </Border>
+                    <TextBlock Text="MPU-Trainer" FontSize="22" FontWeight="Bold"
+                               Foreground="White" Margin="2,16,0,0"/>
+                    <TextBlock Text="BfK GmbH"
+                               FontSize="13.5" Foreground="#A7ADB7"
+                               Margin="2,3,0,0"/>
+                </StackPanel>
+
+                <!-- Navigation (Kacheln mit Symbolen) -->
+                <StackPanel DockPanel.Dock="Top" Margin="14,10,14,0">
+
+                    <Button Command="{Binding GoDashboardCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePage}" Value="Dashboard">
+                                        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="18" Width="28"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <TextBlock Text="Dashboard" FontSize="16" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding GoUploadCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePage}" Value="Upload">
+                                        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="18" Width="28"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <TextBlock Text="Dokument hochladen" FontSize="16" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding GoQuestionsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePage}" Value="Questions">
+                                        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="18" Width="28"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <TextBlock Text="Fragenübersicht" FontSize="16" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding GoTrainingCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePage}" Value="Training">
+                                        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="18" Width="28"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <TextBlock Text="Trainingsmodus" FontSize="16" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Separator Margin="10,16" Background="#3C404A"/>
+
+                    <Button Command="{Binding GoSettingsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ActivePage}" Value="Settings">
+                                        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="18" Width="28"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <TextBlock Text="Einstellungen" FontSize="16" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Aktuelles Projekt + Version -->
+                <StackPanel DockPanel.Dock="Bottom" Margin="22,0,22,20">
+                    <TextBlock Text="{Binding CurrentProjectName}" TextWrapping="Wrap"
+                               Foreground="#A7ADB7" FontSize="13"/>
+                    <TextBlock Text="Version 0.12.0" Foreground="#767C86" FontSize="11.5"
+                               Margin="0,10,0,0"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Inhaltsbereich: rendert das aktuelle ViewModel ueber die DataTemplates -->
+        <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" Margin="0"/>
+    </Grid>
+</Window>

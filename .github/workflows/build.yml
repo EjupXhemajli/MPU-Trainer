@@ -1,0 +1,68 @@
+name: Build MPU-Trainer
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:        # erlaubt manuelles Starten über den Actions-Tab
+
+permissions:
+  contents: write           # nötig für das Veröffentlichen der Release-Seite
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: .NET 8 einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Versionsnummer aus dem Projekt auslesen
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path MpuTrainer/MpuTrainer.csproj -Pattern '<Version>(.*?)</Version>').Matches[0].Groups[1].Value
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Gebaute Version: $v"
+
+      - name: Anwendung veröffentlichen (eigenständige EXE, kein .NET nötig)
+        run: >
+          dotnet publish MpuTrainer/MpuTrainer.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -o publish
+
+      - name: Inno Setup installieren
+        run: choco install innosetup --no-progress -y
+
+      - name: Installationsdatei (Setup) erstellen
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\MpuTrainer.iss'
+
+      - name: Setup-Datei mit Versionsnummer benennen
+        shell: pwsh
+        run: Copy-Item "installer\Output\MPU-Trainer-Setup.exe" "installer\Output\MPU-Trainer-Setup-${{ steps.ver.outputs.version }}.exe"
+
+      - name: Setup als Artefakt hochladen (Sicherung)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MPU-Trainer-Setup-${{ steps.ver.outputs.version }}
+          path: installer/Output/MPU-Trainer-Setup-${{ steps.ver.outputs.version }}.exe
+
+      - name: Release-Seite mit Setup-Datei veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}-build${{ github.run_number }}
+          name: MPU-Trainer ${{ steps.ver.outputs.version }} (Build ${{ github.run_number }})
+          body: "Automatisch erzeugter Build. Setup-Datei unten unter Assets herunterladen."
+          files: |
+            installer/Output/MPU-Trainer-Setup-${{ steps.ver.outputs.version }}.exe
+            publish/MpuTrainer.exe

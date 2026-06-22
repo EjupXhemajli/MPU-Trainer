@@ -1,0 +1,18 @@
+## Build-Ausgaben
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+
+## Lokale Daten (sollten nie eingecheckt werden)
+*.db
+*.db-shm
+*.db-wal
+secret.bin
