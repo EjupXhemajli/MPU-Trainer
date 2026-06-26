@@ -403,19 +403,35 @@ public partial class TrainingViewModel : ViewModelBase
         return null;
     }
 
-    /// <summary>Formt die strukturierte Auswertung in einen gut lesbaren Text um.</summary>
+    /// <summary>Formt die psychologische Auswertung in einen gut lesbaren Text um.</summary>
     private static string FormatEvaluation(AnswerEvaluation e)
     {
+        // Notfall: kein gueltiges JSON -> Rohtext der KI zeigen.
+        if (e.IsEmpty)
+            return string.IsNullOrWhiteSpace(e.Rohtext)
+                ? "Es konnte keine Auswertung erstellt werden."
+                : e.Rohtext.Trim();
+
         var sb = new System.Text.StringBuilder();
 
-        if (!string.IsNullOrWhiteSpace(e.Kernuebereinstimmung))
-            sb.AppendLine("Übereinstimmung mit der Musterantwort:")
-              .AppendLine(e.Kernuebereinstimmung.Trim())
+        if (!string.IsNullOrWhiteSpace(e.Gesamturteil))
+            sb.AppendLine("Gesamturteil: " + e.Gesamturteil.Trim()).AppendLine();
+
+        AppendSection(sb, "Stärken", e.Staerken);
+        AppendSection(sb, "Schwächen", e.Schwaechen);
+
+        if (!string.IsNullOrWhiteSpace(e.PsychologischeEinschaetzung))
+            sb.AppendLine("Psychologische Einschätzung:")
+              .AppendLine(e.PsychologischeEinschaetzung.Trim())
               .AppendLine();
 
-        AppendSection(sb, "Was war falsch oder abweichend", e.Abweichungen);
-        AppendSection(sb, "Was im Kern noch nicht verstanden wurde", e.NichtVerstanden);
+        if (!string.IsNullOrWhiteSpace(e.Risikobewertung))
+            sb.AppendLine("Gutachterliche Risikobewertung:")
+              .AppendLine(e.Risikobewertung.Trim())
+              .AppendLine();
+
         AppendSection(sb, "Verbesserungsvorschläge", e.Verbesserungen);
+        AppendSection(sb, "Mögliche Nachfragen eines Gutachters", e.MoeglicheNachfragen);
 
         var text = sb.ToString().Trim();
         return string.IsNullOrWhiteSpace(text)

@@ -24,6 +24,9 @@
             <DataTemplate DataType="{x:Type vm:TrainingViewModel}">
                 <views:TrainingView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:GutachterViewModel}">
+                <views:GutachterView/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
                 <views:SettingsView/>
             </DataTemplate>

@@ -31,6 +31,7 @@ public partial class MainViewModel : ViewModelBase
             DocumentUploadViewModel => "Upload",
             QuestionsViewModel => "Questions",
             TrainingViewModel => "Training",
+            GutachterViewModel => "Gutachter",
             SettingsViewModel => "Settings",
             _ => ActivePage
         };
@@ -60,5 +61,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand] private void GoUpload() => _navigation.NavigateTo<DocumentUploadViewModel>();
     [RelayCommand] private void GoQuestions() => _navigation.NavigateTo<QuestionsViewModel>();
     [RelayCommand] private void GoTraining() => _navigation.NavigateTo<TrainingViewModel>();
+    [RelayCommand] private void GoGutachter() => _navigation.NavigateTo<GutachterViewModel>();
     [RelayCommand] private void GoSettings() => _navigation.NavigateTo<SettingsViewModel>();
 }

@@ -6,24 +6,39 @@ using MpuTrainer.Services;
 
 namespace MpuTrainer.AI;
 
-/// <summary>Strukturierte Auswertung einer Klientenantwort im Vergleich zur Musterantwort.</summary>
+/// <summary>Psychologisch fundierte Auswertung einer Klientenantwort (gutachterliche Sicht).</summary>
 public class AnswerEvaluation
 {
-    /// <summary>Stimmt die Antwort im Kern mit der Musterantwort ueberein? (Urteil + Begruendung)</summary>
-    public string Kernuebereinstimmung { get; set; } = string.Empty;
+    /// <summary>Staerken der Antwort (psychologisch konkret).</summary>
+    public List<string> Staerken { get; set; } = new();
 
-    /// <summary>Was war falsch oder weicht von der Musterantwort ab?</summary>
-    public List<string> Abweichungen { get; set; } = new();
+    /// <summary>Schwaechen der Antwort.</summary>
+    public List<string> Schwaechen { get; set; } = new();
 
-    /// <summary>Was hat der Klient im Kern noch nicht verstanden?</summary>
-    public List<string> NichtVerstanden { get; set; } = new();
+    /// <summary>Zusammenhaengende psychologische Einschaetzung (Fliesstext).</summary>
+    public string PsychologischeEinschaetzung { get; set; } = string.Empty;
 
-    /// <summary>Konkrete Verbesserungsvorschlaege.</summary>
+    /// <summary>Gutachterliche Risikobewertung: Rueckfallrisiko, Schutz-/Risikofaktoren (Fliesstext).</summary>
+    public string Risikobewertung { get; set; } = string.Empty;
+
+    /// <summary>Konkrete, umsetzbare Verbesserungsvorschlaege.</summary>
     public List<string> Verbesserungen { get; set; } = new();
 
+    /// <summary>Moegliche Nachfragen eines MPU-Gutachters zu dieser Antwort.</summary>
+    public List<string> MoeglicheNachfragen { get; set; } = new();
+
+    /// <summary>Gesamturteil: ueberzeugend | teilweise ueberzeugend | nicht ueberzeugend.</summary>
+    public string Gesamturteil { get; set; } = string.Empty;
+
+    /// <summary>Rohtext der KI als Notfall-Anzeige, falls kein gueltiges JSON kam.</summary>
+    public string Rohtext { get; set; } = string.Empty;
+
     public bool IsEmpty =>
-        string.IsNullOrWhiteSpace(Kernuebereinstimmung) &&
-        Abweichungen.Count == 0 && NichtVerstanden.Count == 0 && Verbesserungen.Count == 0;
+        Staerken.Count == 0 && Schwaechen.Count == 0 &&
+        string.IsNullOrWhiteSpace(PsychologischeEinschaetzung) &&
+        string.IsNullOrWhiteSpace(Risikobewertung) &&
+        Verbesserungen.Count == 0 && MoeglicheNachfragen.Count == 0 &&
+        string.IsNullOrWhiteSpace(Gesamturteil);
 }
 
 public interface IAnswerEvaluationService
@@ -70,14 +85,14 @@ public class AnswerEvaluationService : IAnswerEvaluationService
             project.LeitfadenText, question.Text, question.ModelAnswer ?? string.Empty,
             transcript, project.Language);
 
-        var raw = await client.CompleteAsync(system, prompt, temp, 1500, ct);
+        var raw = await client.CompleteAsync(system, prompt, temp, 2200, ct);
 
         var result = Parse(raw);
 
         // Fallback: konnte nichts strukturiert gelesen werden, den Rohtext zeigen,
         // damit nie "keine Auswertung" erscheint.
         if (result.IsEmpty && !string.IsNullOrWhiteSpace(raw))
-            result.Kernuebereinstimmung = Clean(raw);
+            result.Rohtext = Clean(raw);
 
         return result;
     }
@@ -121,14 +136,21 @@ public class AnswerEvaluationService : IAnswerEvaluationService
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return result;
 
-            result.Kernuebereinstimmung = GetString(root,
-                "kernuebereinstimmung", "kernübereinstimmung", "uebereinstimmung", "übereinstimmung", "fazit", "summary");
-            result.Abweichungen = GetStringList(root,
-                "abweichungen", "falsch", "fehler", "deviations");
-            result.NichtVerstanden = GetStringList(root,
-                "nicht_verstanden", "nichtverstanden", "nicht verstanden", "defizite", "misunderstandings");
+            result.Staerken = GetStringList(root,
+                "staerken", "stärken", "strengths");
+            result.Schwaechen = GetStringList(root,
+                "schwaechen", "schwächen", "weaknesses", "maengel", "mängel");
+            result.PsychologischeEinschaetzung = GetString(root,
+                "psychologische_einschaetzung", "psychologische_einschätzung",
+                "psychologische einschaetzung", "einschaetzung", "einschätzung", "assessment");
+            result.Risikobewertung = GetString(root,
+                "risikobewertung", "risiko", "risk", "risk_assessment");
             result.Verbesserungen = GetStringList(root,
                 "verbesserungen", "verbesserungsvorschlaege", "verbesserungsvorschläge", "improvements");
+            result.MoeglicheNachfragen = GetStringList(root,
+                "moegliche_nachfragen", "mögliche_nachfragen", "nachfragen", "follow_up", "follow_up_questions");
+            result.Gesamturteil = GetString(root,
+                "gesamturteil", "urteil", "fazit", "verdict", "ergebnis");
         }
         catch
         {

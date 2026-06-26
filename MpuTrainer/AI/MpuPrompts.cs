@@ -99,13 +99,16 @@ public static class MpuPrompts
 
     /// <summary>Systemkontext fuer die Auswertung einer Klientenantwort.</summary>
     public const string EvaluationSystem =
-        "Du bist ein erfahrener Verkehrspsychologe und MPU-Gutachter. Du vergleichst die geuebte " +
-        "Antwort eines Klienten mit einer vorgegebenen Musterantwort und bewertest, ob der Klient " +
-        "die Kernaussagen SINNGEMAESS verstanden und getroffen hat. Es geht ausschliesslich um den " +
-        "INHALT und die Bedeutung, nicht um den genauen Wortlaut: Eine Antwort ist auch dann richtig, " +
-        "wenn sie voellig anders formuliert ist als die Musterantwort, solange die inhaltlichen " +
-        "Kernpunkte sinngemaess vorkommen. Du bist fachlich, ehrlich und konstruktiv. Du bewertest " +
-        "ausschliesslich das, was der Klient tatsaechlich gesagt hat (das Transkript), und erfindest nichts hinzu.";
+        "Du bist ein erfahrener Verkehrspsychologe und MPU-Gutachter mit Schwerpunkt MPU-Vorbereitung. " +
+        "Du bewertest die Antwort eines Klienten NICHT nach sprachlicher Aehnlichkeit zu einer Musterantwort, " +
+        "sondern nach psychologischer Qualitaet: Problembewusstsein, Einsichtsfaehigkeit, " +
+        "Verantwortungsuebernahme, Glaubwuerdigkeit, Authentizitaet, Selbstreflexion, emotionale Verarbeitung, " +
+        "Veraenderungsmotivation, Stabilitaet der Veraenderung, konkrete Verhaltensaenderungen im Alltag sowie " +
+        "Risiko- und Rueckfallbewusstsein und Rueckfallpraevention. Du achtest auf innere Logik, Widersprueche, " +
+        "Bagatellisierung, Schuldverschiebung, fehlende Tiefe und fehlende konkrete Beispiele und benennst " +
+        "Schutz- und Risikofaktoren. Du formulierst fachlich, klar und nachvollziehbar und bewertest " +
+        "ausschliesslich das, was der Klient tatsaechlich gesagt hat (das Transkript); du erfindest nichts hinzu. " +
+        "Du gibst KEINE amtliche MPU-Entscheidung ab, sondern eine vorbereitende psychologische Einschaetzung.";
 
     /// <summary>
     /// Baut den Systemkontext fuer die Auswertung und bindet – falls vorhanden – die fachliche
@@ -142,33 +145,41 @@ public static class MpuPrompts
         var lang = string.IsNullOrWhiteSpace(language) ? "Deutsch" : language.Trim();
 
         return
-            "Vergleiche die folgende Antwort eines Klienten aus einer MPU-Vorbereitung mit der " +
-            "vorgegebenen Musterantwort und beurteile sie.\n\n" +
-            "GRUNDREGEL: Bewerte ausschliesslich SINNGEMAESS nach Inhalt und Bedeutung, NICHT nach " +
-            "der Wortwahl oder Formulierung. Andere Worte, andere Reihenfolge, andere Beispiele oder " +
-            "Umgangssprache sind voellig in Ordnung, solange die inhaltlichen Kernpunkte getroffen " +
-            "werden. Bestrafe NICHT, dass der Klient etwas anders formuliert als die Musterantwort. " +
-            "Entscheidend ist allein, ob die wesentlichen Aussagen sinngemaess enthalten sind.\n\n" +
-            "Beantworte dabei genau drei Punkte:\n" +
-            "1. KERNUEBEREINSTIMMUNG: Trifft die Antwort des Klienten die Musterantwort inhaltlich/" +
-            "sinngemaess im Kern? Beginne mit einem klaren Urteil (Ja / Teilweise / Nein) und begruende es kurz.\n" +
-            "2. ABWEICHUNGEN: Welche INHALTLICHEN Kernpunkte fehlen oder sind sachlich falsch? " +
-            "(Reine Formulierungsunterschiede zaehlen hier NICHT als Abweichung.)\n" +
-            "3. NICHT VERSTANDEN: Was hat der Klient im Kern noch nicht verstanden (z. B. Einsicht, " +
-            "Ursachen, Verantwortung, Verhaltensaenderung, Rueckfallvermeidung)?\n" +
-            "Gib ausserdem konkrete, umsetzbare Verbesserungsvorschlaege.\n\n" +
-            "Wenn die Antwort sehr kurz, leer oder am Thema vorbei ist, sage das ehrlich.\n\n" +
+            "Beurteile die folgende Antwort eines Klienten aus einer MPU-Vorbereitung psychologisch – " +
+            "wie ein erfahrener Verkehrspsychologe und MPU-Gutachter.\n\n" +
+            "WICHTIG: Es geht NICHT um sprachliche Uebereinstimmung mit der Musterantwort. Die Musterantwort " +
+            "ist nur ein inhaltlicher Orientierungspunkt, kein Wortlaut-Massstab. Bewerte die psychologische " +
+            "QUALITAET der Antwort: Problembewusstsein, Einsicht, Verantwortungsuebernahme, Glaubwuerdigkeit " +
+            "und Authentizitaet, Selbstreflexion, emotionale Verarbeitung, Veraenderungsmotivation und " +
+            "-stabilitaet, konkrete Verhaltensaenderungen im Alltag sowie Risikobewusstsein und " +
+            "Rueckfallpraevention. Achte auf innere Logik, Widersprueche, Bagatellisierung, Schuldverschiebung, " +
+            "fehlende Tiefe und fehlende konkrete Beispiele.\n\n" +
+            "Liefere eine fachliche, gut begruendete Rueckmeldung mit genau diesen Bestandteilen:\n" +
+            "1. STAERKEN der Antwort (psychologisch konkret, nicht nur formal)\n" +
+            "2. SCHWAECHEN der Antwort\n" +
+            "3. PSYCHOLOGISCHE EINSCHAETZUNG als zusammenhaengender Fliesstext im gutachterlichen Ton " +
+            "(was zeigt die Antwort, was fehlt, wie tief ist die Aufarbeitung)\n" +
+            "4. GUTACHTERLICHE RISIKOBEWERTUNG als Fliesstext (Rueckfallrisiko, Schutzfaktoren, Risikofaktoren, " +
+            "Stabilitaet der Veraenderung)\n" +
+            "5. KONKRETE VERBESSERUNGSVORSCHLAEGE (umsetzbar, inhaltlich)\n" +
+            "6. MOEGLICHE NACHFRAGEN, die ein MPU-Gutachter zu dieser Antwort stellen wuerde\n" +
+            "7. GESAMTURTEIL: genau einer der Werte \"ueberzeugend\", \"teilweise ueberzeugend\" oder " +
+            "\"nicht ueberzeugend\"\n\n" +
+            "Wenn die Antwort sehr kurz, leer oder am Thema vorbei ist, sage das ehrlich und werte entsprechend.\n\n" +
             $"WICHTIG: Formuliere die gesamte Rueckmeldung ausschliesslich in folgender Sprache: {lang}.\n\n" +
             "Antworte AUSSCHLIESSLICH mit einem gueltigen JSON-Objekt, ohne weiteren Text, ohne Markdown " +
             "und ohne Code-Zaeune. Schema:\n" +
             "{\n" +
-            "  \"kernuebereinstimmung\": \"Ja/Teilweise/Nein - kurze Begruendung\",\n" +
-            "  \"abweichungen\": [\"...\"],\n" +
-            "  \"nicht_verstanden\": [\"...\"],\n" +
-            "  \"verbesserungen\": [\"...\"]\n" +
+            "  \"staerken\": [\"...\"],\n" +
+            "  \"schwaechen\": [\"...\"],\n" +
+            "  \"psychologische_einschaetzung\": \"... (Fliesstext)\",\n" +
+            "  \"risikobewertung\": \"... (Fliesstext)\",\n" +
+            "  \"verbesserungen\": [\"...\"],\n" +
+            "  \"moegliche_nachfragen\": [\"...\"],\n" +
+            "  \"gesamturteil\": \"ueberzeugend | teilweise ueberzeugend | nicht ueberzeugend\"\n" +
             "}\n\n" +
             "FRAGE:\n" + question + "\n\n" +
-            "MUSTERANTWORT (der inhaltliche Massstab):\n\"\"\"\n" +
+            "MUSTERANTWORT (nur inhaltlicher Orientierungspunkt, kein Wortlaut-Massstab):\n\"\"\"\n" +
             (string.IsNullOrWhiteSpace(modelAnswer) ? "(keine Musterantwort hinterlegt)" : modelAnswer.Trim()) +
             "\n\"\"\"\n\n" +
             "ANTWORT DES KLIENTEN (Transkript der Aufnahme):\n\"\"\"\n" +
