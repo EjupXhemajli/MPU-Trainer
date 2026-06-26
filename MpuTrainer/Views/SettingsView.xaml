@@ -1,0 +1,254 @@
+<UserControl x:Class="MpuTrainer.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32">
+        <StackPanel>
+            <TextBlock Text="Einstellungen" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="Audiogeräte, Sprachausgabe und KI-Anbindung konfigurieren. Einstellungen werden lokal gespeichert."
+                       Style="{StaticResource PageSubtitle}" Margin="0,0,0,20"/>
+
+            <!-- Audio & Sprachausgabe -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Audio &amp; Sprachausgabe" Style="{StaticResource SectionHeader}"/>
+
+                    <TextBlock Text="Mikrofon" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox ItemsSource="{Binding Microphones}" SelectedItem="{Binding SelectedMicrophone}"/>
+
+                    <TextBlock Text="Lautsprecher / Kopfhörer" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <ComboBox ItemsSource="{Binding Speakers}" SelectedItem="{Binding SelectedSpeaker}"/>
+
+                    <Button Content="Geräte neu erkennen" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding RefreshDevicesCommand}"
+                            HorizontalAlignment="Left" Margin="0,12,0,0"/>
+
+                    <!-- Sprachausgabe-Anbieter -->
+                    <TextBlock Text="Sprachausgabe-Anbieter" Style="{StaticResource FieldLabel}" Margin="0,16,0,0"/>
+                    <ComboBox ItemsSource="{Binding TtsProviders}" SelectedItem="{Binding SelectedTtsProvider}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumDescription}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Text="Premium-API-Key (für OpenAI oder ElevenLabs)" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding PremiumApiKey, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
+                    <TextBlock Text="Nur für Premium-Stimmen nötig. Wird verschlüsselt (DPAPI) gespeichert. Für Windows-Stimmen leer lassen."
+                               Foreground="{StaticResource SubtleTextBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+
+                    <TextBlock Text="OpenAI-Modell (nur OpenAI, z. B. tts-1-hd oder gpt-4o-mini-tts)" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding OpenAiModel, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Stimme" Style="{StaticResource FieldLabel}" Margin="0,14,0,0"/>
+                    <ComboBox ItemsSource="{Binding Voices}" SelectedItem="{Binding SelectedVoice}"/>
+                    <Button Content="ElevenLabs-Stimmen laden" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding LoadElevenVoicesCommand}"
+                            Visibility="{Binding IsElevenLabs, Converter={StaticResource BoolToVisibility}}"
+                            HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                    <TextBlock Text="{Binding TtsStatus}" Foreground="{StaticResource AccentBrush}"
+                               FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
+
+                    <TextBlock Text="Lautstärke" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="56"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding Volume}"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Volume, StringFormat=P0}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Button Content="Sprachausgabe testen" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding SpeakSampleCommand}"
+                            HorizontalAlignment="Left" Margin="0,12,0,0"/>
+
+                    <CheckBox Content="Begrüßung beim Start abspielen (Melodie + „Willkommen bei der BfK“)"
+                              IsChecked="{Binding PlayWelcomeOnStartup}"
+                              Foreground="{StaticResource TextBrush}" Margin="0,16,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Hintergrund auswählen -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Hintergrund auswählen" Style="{StaticResource SectionHeader}"/>
+                    <TextBlock Text="10 ruhige, aufeinander abgestimmte Designs. Klicken zum Übernehmen – die Auswahl wird gespeichert."
+                               Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                    <ItemsControl ItemsSource="{Binding Backgrounds}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.SelectBackgroundCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <StackPanel Width="134" Margin="0,0,14,14">
+                                                <Border x:Name="Sw" Height="70" CornerRadius="10"
+                                                        Background="{Binding Brush}"
+                                                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                    <Border x:Name="Ring" CornerRadius="10" Background="Transparent"
+                                                            BorderBrush="{StaticResource AccentBrush}" BorderThickness="0"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" FontSize="12.5" Margin="2,7,0,0"
+                                                           TextWrapping="Wrap" Foreground="{StaticResource TextBrush}"/>
+                                            </StackPanel>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter TargetName="Ring" Property="BorderThickness" Value="3"/>
+                                                    <Setter TargetName="Sw" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- KI-Anbindung -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="KI-Anbindung" Style="{StaticResource SectionHeader}"/>
+
+                    <TextBlock Text="Anbieter" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding Provider}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumDescription}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Text="API-Key" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="Consolas"/>
+                    <TextBlock Text="Wird verschlüsselt über die Windows-DPAPI gespeichert (nicht im Klartext)."
+                               Foreground="{StaticResource SubtleTextBrush}" FontSize="12" Margin="0,4,0,0"/>
+
+                    <TextBlock Text="Modell" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Base-URL (optional)" Style="{StaticResource FieldLabel}" Margin="0,12,0,0"/>
+                    <TextBox Text="{Binding BaseUrl, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="160"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Temperatur" Style="{StaticResource FieldLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="48"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding Temperature}"
+                                        TickFrequency="0.05" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Temperature, StringFormat=F2}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Max Tokens" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding MaxTokens, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <Button Content="Verbindung testen" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding TestConnectionCommand}"/>
+                        <TextBlock Text="{Binding TestStatus}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                   Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Hinweis: Bei Nutzung einer externen KI werden die Inhalte des Leitfadens und die Fragen zur Verarbeitung an den gewählten Anbieter übertragen."
+                               Foreground="{StaticResource SubtleTextBrush}" FontSize="12"
+                               TextWrapping="Wrap" Margin="0,12,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Wissensbasis (Skills & Dokumente) -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Wissensbasis (Skills &amp; Dokumente)" Style="{StaticResource SectionHeader}"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" FontSize="12.5" Margin="0,0,0,12"
+                               Text="Hinterlege fachliche Skills (z. B. den DIAGNOSTIKER-Skill) und Dokumente bzw. Datenbanken (z. B. die BK-5-Kriterien). Aktive Einträge fließen als fachlicher Rahmen in die KI-Auswertung ein, damit diese psychologisch fundiert urteilt. Unterstützt werden Word, PDF, MD, TXT, CSV, JSON, XML und weitere Textformate."/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Button Content="+ Skill hinzufügen" Style="{StaticResource PrimaryButton}"
+                                Command="{Binding AddSkillCommand}" Margin="0,0,10,0"/>
+                        <Button Content="+ Dokument hinzufügen" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding AddDocumentCommand}"/>
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding KnowledgeItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#F6F7F9" CornerRadius="10" Padding="12,10" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" VerticalAlignment="Center"
+                                                  ToolTip="Aktiv: fließt in die Auswertung ein" Margin="0,0,12,0"/>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding FileName}" Foreground="{StaticResource TextBrush}"
+                                                       FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding SizeLabel}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11.5"/>
+                                        </StackPanel>
+
+                                        <Border Grid.Column="2" Background="{StaticResource AccentSoftBrush}" CornerRadius="6"
+                                                Padding="8,3" VerticalAlignment="Center" Margin="0,0,10,0">
+                                            <TextBlock Text="{Binding KindLabel}" Foreground="{StaticResource AccentBrush}"
+                                                       FontSize="11" FontWeight="SemiBold"/>
+                                        </Border>
+
+                                        <Button Grid.Column="3" Content="Entfernen" Style="{StaticResource SecondaryButton}"
+                                                Command="{Binding DataContext.RemoveKnowledgeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="{Binding KnowledgeSummary}" Foreground="{StaticResource SubtleTextBrush}"
+                               FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Speicherort -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Speicherort" Style="{StaticResource SectionHeader}"/>
+                    <TextBlock Text="Verzeichnis für Projekte und Audiodateien" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding ProjectsDirectory, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Button Content="Einstellungen speichern" Style="{StaticResource PrimaryButton}"
+                        Command="{Binding SaveCommand}"/>
+                <TextBlock Text="Bitte warten…" VerticalAlignment="Center" Margin="14,0,0,0"
+                           Foreground="{StaticResource SubtleTextBrush}"
+                           Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

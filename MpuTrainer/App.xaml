@@ -1,0 +1,32 @@
+<Application x:Class="MpuTrainer.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MpuTrainer.ViewModels"
+             xmlns:views="clr-namespace:MpuTrainer.Views">
+    <!-- Kein StartupUri: das Hauptfenster wird in App.xaml.cs ueber DI erzeugt. -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- ViewModel -> View Zuordnung (DataTemplates), damit der ContentControl
+                 automatisch die passende Ansicht zum aktuellen ViewModel rendert. -->
+            <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+                <views:DashboardView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:DocumentUploadViewModel}">
+                <views:DocumentUploadView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:QuestionsViewModel}">
+                <views:QuestionsView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:TrainingViewModel}">
+                <views:TrainingView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+                <views:SettingsView/>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
