@@ -121,6 +121,38 @@ public class TtsService : ITtsService
         var dir = Path.GetDirectoryName(outputWavPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
+        text ??= string.Empty;
+
+        // Lange Texte zerlegen: OpenAI-TTS erlaubt max. ~4096 Zeichen pro Anfrage. Ohne Aufteilung
+        // wuerde z. B. eine lange Musterantwort die Sprachausgabe und damit die MP3-Erstellung abbrechen.
+        if (text.Length <= MaxTtsChars)
+        {
+            await SpeakChunkAsync(text, outputWavPath, opt, ct);
+            return;
+        }
+
+        var chunks = SplitForTts(text, MaxTtsChars);
+        var parts = new List<string>();
+        try
+        {
+            foreach (var chunk in chunks)
+            {
+                var part = Path.Combine(dir ?? Path.GetTempPath(), $"_ttspart_{Guid.NewGuid():N}.wav");
+                await SpeakChunkAsync(chunk, part, opt, ct);
+                parts.Add(part);
+            }
+            ConcatWavs(parts, outputWavPath);
+        }
+        finally
+        {
+            foreach (var p in parts)
+                try { if (File.Exists(p)) File.Delete(p); } catch { /* Aufraeumen ist unkritisch */ }
+        }
+    }
+
+    /// <summary>Erzeugt genau ein Audiostueck (ohne Aufteilung) mit dem gewaehlten Anbieter.</summary>
+    private async Task SpeakChunkAsync(string text, string outputWavPath, TtsOptions opt, CancellationToken ct)
+    {
         switch (opt.Provider)
         {
             case TtsProvider.OpenAI:
@@ -238,4 +270,58 @@ public class TtsService : ITtsService
     }
 
     private static string Trim(string s) => s.Length > 300 ? s[..300] + " ..." : s;
+
+    // ---- Aufteilung langer Texte + WAV-Verkettung ---------------------
+
+    private const int MaxTtsChars = 3500;
+
+    /// <summary>Teilt langen Text an Satz-/Wortgrenzen in Stuecke von hoechstens maxLen Zeichen.</summary>
+    private static List<string> SplitForTts(string text, int maxLen)
+    {
+        var result = new List<string>();
+        var remaining = text.Trim();
+        while (remaining.Length > maxLen)
+        {
+            int cut = FindCut(remaining, maxLen);
+            var piece = remaining[..cut].Trim();
+            if (piece.Length > 0) result.Add(piece);
+            remaining = remaining[cut..].Trim();
+        }
+        if (remaining.Length > 0) result.Add(remaining);
+        return result;
+    }
+
+    /// <summary>Findet eine moeglichst natuerliche Schnittstelle (Satzende, sonst Leerzeichen).</summary>
+    private static int FindCut(string s, int maxLen)
+    {
+        int window = System.Math.Min(maxLen, s.Length);
+        int sentence = s.LastIndexOfAny(new[] { '.', '!', '?', '\n' }, window - 1);
+        if (sentence >= maxLen / 2) return sentence + 1;
+        int space = s.LastIndexOf(' ', window - 1);
+        if (space >= maxLen / 2) return space + 1;
+        return window;
+    }
+
+    /// <summary>Verkettet mehrere WAV-Dateien gleichen Formats (gleicher Anbieter/Stimme) zu einer WAV.</summary>
+    private static void ConcatWavs(IReadOnlyList<string> parts, string outputWavPath)
+    {
+        var valid = new List<string>();
+        foreach (var p in parts) if (File.Exists(p)) valid.Add(p);
+        if (valid.Count == 0) return;
+
+        WaveFileWriter? writer = null;
+        try
+        {
+            foreach (var part in valid)
+            {
+                using var reader = new WaveFileReader(part);
+                writer ??= new WaveFileWriter(outputWavPath, reader.WaveFormat);
+                var buffer = new byte[reader.WaveFormat.AverageBytesPerSecond];
+                int read;
+                while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
+                    writer.Write(buffer, 0, read);
+            }
+        }
+        finally { writer?.Dispose(); }
+    }
 }

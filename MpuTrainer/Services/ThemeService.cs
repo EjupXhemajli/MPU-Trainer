@@ -96,16 +96,16 @@ public class ThemeService : IThemeService
             Light("fokus",     "Fokusmodus Training",     VGrad("#DCE7E2", "#CCD9D3")),
 
             // ---- Dunkle Designs (helle Schrift, weisse Karten heben sich ab) ----
-            Dark("nachtblau",   "Nachtblau",               Solid("#1E2A3A")),
-            Dark("anthrazitd",  "Dunkles Anthrazit",       Solid("#23262C")),
-            Dark("schiefer",    "Schiefergrau",            VGrad("#2B3038", "#20242B")),
-            Dark("graphit",     "Graphit",                 Solid("#2A2D33")),
-            Dark("mitternacht", "Mitternacht",             VGrad("#161A22", "#232C39")),
-            Dark("tanne",       "Dunkles Tannengrün",      Solid("#1F2A26")),
-            Dark("bordeaux",    "Dunkles Bordeaux",        Solid("#2A1E24")),
-            Dark("espresso",    "Espresso",                Solid("#2A2420")),
-            Dark("petrol",      "Dunkles Petrol",          VGrad("#163139", "#0F252B")),
-            Dark("indigo",      "Indigo",                  DiagGrad("#221E33", "#161226")),
+            Dark("nachtblau",   "Nachtblau",               Solid("#3A4F68")),
+            Dark("anthrazitd",  "Dunkles Anthrazit",       Solid("#454B57")),
+            Dark("schiefer",    "Schiefergrau",            VGrad("#4A535F", "#3C434E")),
+            Dark("graphit",     "Graphit",                 Solid("#4A505A")),
+            Dark("mitternacht", "Mitternacht",             VGrad("#364154", "#46546B")),
+            Dark("tanne",       "Dunkles Tannengrün",      Solid("#3C5049")),
+            Dark("bordeaux",    "Dunkles Bordeaux",        Solid("#4F3A45")),
+            Dark("espresso",    "Espresso",                Solid("#4D423A")),
+            Dark("petrol",      "Dunkles Petrol",          VGrad("#325862", "#284A53")),
+            Dark("indigo",      "Indigo",                  DiagGrad("#423A5E", "#322A4F")),
         };
 
         CurrentBackground = _themes[0].Brush;

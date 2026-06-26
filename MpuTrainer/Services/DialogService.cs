@@ -6,6 +6,7 @@ namespace MpuTrainer.Services;
 public interface IDialogService
 {
     string? OpenFile(string filter, string title);
+    string[] OpenFiles(string filter, string title);
     string? SaveFile(string filter, string title, string defaultFileName);
     void Info(string message, string title = "Hinweis");
     void Error(string message, string title = "Fehler");
@@ -24,6 +25,18 @@ public class DialogService : IDialogService
             CheckFileExists = true
         };
         return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
+    public string[] OpenFiles(string filter, string title)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Filter = filter,
+            Title = title,
+            CheckFileExists = true,
+            Multiselect = true
+        };
+        return dlg.ShowDialog() == true ? dlg.FileNames : System.Array.Empty<string>();
     }
 
     public string? SaveFile(string filter, string title, string defaultFileName)

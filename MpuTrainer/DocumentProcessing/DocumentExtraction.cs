@@ -30,10 +30,12 @@ public class DocumentExtractionService : IDocumentExtractionService
         {
             ".docx" => ExtractDocx(filePath),
             ".pdf" => ExtractPdf(filePath),
-            ".txt" or ".text" or ".md" or ".markdown" or ".csv" => ExtractPlainText(filePath),
+            ".txt" or ".text" or ".md" or ".markdown" or ".csv" or ".tsv"
+                or ".json" or ".jsonl" or ".ndjson" or ".xml" or ".yaml" or ".yml"
+                or ".log" or ".ini" or ".htm" or ".html" => ExtractPlainText(filePath),
             _ => throw new NotSupportedException(
                 "Nicht unterstuetztes Format. Moeglich sind Word (.docx), PDF (.pdf) " +
-                "und Textdateien (.txt, .md, .csv).")
+                "und Textformate (.txt, .md, .csv, .json, .xml, .yaml u. a.).")
         };
     }
 

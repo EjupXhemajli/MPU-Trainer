@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define MyAppName "MPU-Trainer"
-#define MyAppVersion "0.12.0"
+#define MyAppVersion "0.16.0"
 #define MyAppPublisher "BfK - Beratungsstelle fuer Kraftfahreignung GmbH"
 #define MyAppExeName "MpuTrainer.exe"
 

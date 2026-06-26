@@ -129,45 +129,115 @@ public class OpenAiCompatibleClient : IAiClient
     public async Task<string> CompleteAsync(string systemPrompt, string userPrompt,
         double temperature, int maxTokens, CancellationToken ct = default)
     {
-        var payload = new
+        // Neuere OpenAI-Modelle (z. B. gpt-5.x und die o-Reihe) verlangen "max_completion_tokens"
+        // statt "max_tokens" und erlauben teils keine abweichende Temperatur. Aeltere bzw. lokale
+        // Anbieter (Ollama, LM Studio) kennen wiederum nur "max_tokens". Deshalb wird die Anfrage bei
+        // einem 400-Fehler "unsupported_parameter" automatisch angepasst und erneut gesendet.
+        var payload = new Dictionary<string, object?>
         {
-            model = _model,
-            max_tokens = maxTokens,
-            temperature,
-            messages = new[]
+            ["model"] = _model,
+            ["max_completion_tokens"] = maxTokens,
+            ["temperature"] = temperature,
+            ["messages"] = new[]
             {
                 new { role = "system", content = systemPrompt },
                 new { role = "user", content = userPrompt }
             }
         };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/chat/completions")
+        var adapted = new HashSet<string>();
+
+        for (int attempt = 0; attempt < 5; attempt++)
         {
-            Content = JsonContent.Create(payload)
-        };
-        request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/chat/completions")
+            {
+                Content = JsonContent.Create(payload)
+            };
+            request.Headers.Add("Authorization", $"Bearer {_apiKey}");
 
-        using var response = await HttpClientHolder.Client.SendAsync(request, ct);
-        var body = await response.Content.ReadAsStringAsync(ct);
+            using var response = await HttpClientHolder.Client.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
 
-        if (!response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
+            {
+                using var doc = JsonDocument.Parse(body);
+                var content = doc.RootElement
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString();
+                return (content ?? string.Empty).Trim();
+            }
+
+            // Nicht unterstuetzter Parameter -> anpassen und erneut versuchen.
+            if ((int)response.StatusCode == 400 && TryAdaptPayload(payload, body, adapted))
+                continue;
+
             throw new InvalidOperationException($"API-Fehler ({(int)response.StatusCode}): {Trim(body)}");
+        }
 
-        using var doc = JsonDocument.Parse(body);
-        var content = doc.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString();
-        return (content ?? string.Empty).Trim();
+        throw new InvalidOperationException(
+            "Die KI-Anfrage wurde auch nach automatischer Parameteranpassung abgelehnt. " +
+            "Bitte Modellnamen und Anbieter pruefen.");
+    }
+
+    /// <summary>
+    /// Passt die Anfrage an, wenn der Anbieter einen Parameter ablehnt: tauscht "max_tokens" und
+    /// "max_completion_tokens" gegeneinander oder entfernt eine nicht erlaubte "temperature".
+    /// Jeder Parameter wird hoechstens einmal angepasst (kein endloses Wiederholen).
+    /// </summary>
+    private static bool TryAdaptPayload(Dictionary<string, object?> payload, string body, HashSet<string> adapted)
+    {
+        string? param = null;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error", out var err))
+            {
+                if (err.TryGetProperty("param", out var p) && p.ValueKind == JsonValueKind.String)
+                    param = p.GetString();
+
+                // Manche Anbieter nennen den Parameter nur im Fehlertext.
+                if (string.IsNullOrEmpty(param) &&
+                    err.TryGetProperty("message", out var m) && m.ValueKind == JsonValueKind.String)
+                {
+                    var msg = m.GetString() ?? string.Empty;
+                    if (msg.Contains("max_completion_tokens")) param = "max_completion_tokens";
+                    else if (msg.Contains("max_tokens")) param = "max_tokens";
+                    else if (msg.Contains("temperature")) param = "temperature";
+                }
+            }
+        }
+        catch { return false; }
+
+        if (string.IsNullOrEmpty(param) || !adapted.Add(param))
+            return false;
+
+        switch (param)
+        {
+            case "max_tokens":
+                if (payload.Remove("max_tokens", out var v1)) { payload["max_completion_tokens"] = v1; return true; }
+                return false;
+
+            case "max_completion_tokens":
+                if (payload.Remove("max_completion_tokens", out var v2)) { payload["max_tokens"] = v2; return true; }
+                return false;
+
+            case "temperature":
+                return payload.Remove("temperature");
+
+            default:
+                return false;
+        }
     }
 
     public async Task<(bool ok, string message)> TestConnectionAsync(CancellationToken ct = default)
     {
         try
         {
+            // Groesseres Budget, damit auch Reasoning-Modelle (gpt-5.x) sichtbaren Text zurueckgeben.
             var answer = await CompleteAsync(
-                "Antworte knapp.", "Antworte mit dem Wort: OK", 0.0, 16, ct);
+                "Antworte knapp.", "Antworte mit dem Wort: OK", 0.0, 256, ct);
             return (true, $"Verbindung erfolgreich. Antwort: {Trim(answer)}");
         }
         catch (Exception ex)

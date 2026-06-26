@@ -10,7 +10,7 @@
     <AssemblyName>MpuTrainer</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.12.0</Version>
+    <Version>0.16.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +20,9 @@
     <!-- App-/Fenster-Icon -->
     <None Remove="Assets\app.ico" />
     <Resource Include="Assets\app.ico" />
+    <!-- Eingebettete Corporate-Musik fuer das Start-Intro -->
+    <None Remove="Assets\intro_music.wav" />
+    <EmbeddedResource Include="Assets\intro_music.wav" />
   </ItemGroup>
 
   <ItemGroup>

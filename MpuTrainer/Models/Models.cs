@@ -201,6 +201,9 @@ public class AppSettings
 
     /// <summary>Id des zuletzt geoeffneten Projekts (zum Wiederherstellen nach Neustart).</summary>
     public int? LastProjectId { get; set; }
+
+    /// <summary>Begruessung ("Willkommen bei der BfK") beim Start abspielen.</summary>
+    public bool PlayWelcomeOnStartup { get; set; } = true;
 }
 
 // ============================================================

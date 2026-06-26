@@ -519,25 +519,45 @@ public partial class TrainingViewModel : ViewModelBase
             StatusMessage = "Unterhaltung wird als MP3 zusammengestellt ...";
 
             var segments = new List<string>();
+            int total = _questions.Count;
+            int done = 0, skipped = 0;
             foreach (var q in _questions)
             {
-                // Frage
-                segments.Add(await EnsureQuestionAudioAsync(q));
-
-                // Klientenantwort (falls vorhanden)
-                if (!string.IsNullOrWhiteSpace(q.RecordingPath) && File.Exists(q.RecordingPath))
-                    segments.Add(q.RecordingPath);
-
-                // Musterantwort (bei Bedarf erzeugen)
-                if (string.IsNullOrWhiteSpace(q.ModelAnswer))
+                done++;
+                StatusMessage = $"MP3 wird erstellt – Frage {done} von {total} wird vertont ...";
+                try
                 {
-                    q.ModelAnswer = await _generation.GenerateModelAnswerAsync(
-                        project.LeitfadenText, q.Text, project.Language);
-                    await _store.UpdateQuestionAsync(q);
+                    // Frage
+                    segments.Add(await EnsureQuestionAudioAsync(q));
+
+                    // Klientenantwort (falls vorhanden)
+                    if (!string.IsNullOrWhiteSpace(q.RecordingPath) && File.Exists(q.RecordingPath))
+                        segments.Add(q.RecordingPath);
+
+                    // Musterantwort (bei Bedarf erzeugen)
+                    if (string.IsNullOrWhiteSpace(q.ModelAnswer))
+                    {
+                        q.ModelAnswer = await _generation.GenerateModelAnswerAsync(
+                            project.LeitfadenText, q.Text, project.Language);
+                        await _store.UpdateQuestionAsync(q);
+                    }
+                    segments.Add(await EnsureModelAudioAsync(q));
                 }
-                segments.Add(await EnsureModelAudioAsync(q));
+                catch
+                {
+                    // Eine einzelne Frage darf die gesamte MP3 nicht verhindern – ueberspringen.
+                    skipped++;
+                }
             }
 
+            if (segments.Count == 0)
+            {
+                _dialog.Error("Es konnte kein Audio erzeugt werden. Bitte Sprachausgabe und Internetverbindung prüfen.");
+                StatusMessage = "MP3 abgebrochen.";
+                return;
+            }
+
+            StatusMessage = "MP3 wird zusammengesetzt ...";
             var stamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
             var mp3Path = Path.Combine(ProjectDir(), $"sitzung_{stamp}.mp3");
 
@@ -547,7 +567,10 @@ public partial class TrainingViewModel : ViewModelBase
             await _store.UpdateAsync(project);
 
             StatusMessage = $"MP3 gespeichert: {mp3Path}";
-            _dialog.Info($"Die gesamte Unterhaltung wurde gespeichert:\n\n{mp3Path}");
+            var note = skipped > 0
+                ? $"\n\nHinweis: {skipped} Frage(n) konnten nicht vertont werden und wurden ausgelassen."
+                : string.Empty;
+            _dialog.Info($"Die gesamte Unterhaltung wurde gespeichert:\n\n{mp3Path}{note}");
         }
         catch (Exception ex)
         {
@@ -614,7 +637,8 @@ public partial class TrainingViewModel : ViewModelBase
 
     private async Task<string> EnsureQuestionAudioAsync(TrainingQuestion q)
     {
-        var path = Path.Combine(ProjectDir(), "tts", $"frage_{q.Order:D3}_{TtsSignature()}.wav");
+        var path = Path.Combine(ProjectDir(), "tts",
+            $"frage_{q.Order:D3}_{ContentHash(q.Text)}_{TtsSignature()}.wav");
         if (!File.Exists(path))
             await _tts.SpeakToWaveFileAsync(q.Text, path);
         return path;
@@ -622,14 +646,27 @@ public partial class TrainingViewModel : ViewModelBase
 
     private async Task<string> EnsureModelAudioAsync(TrainingQuestion q)
     {
-        var path = Path.Combine(ProjectDir(), "tts", $"muster_{q.Order:D3}_{TtsSignature()}.wav");
         var text = q.ModelAnswer ?? string.Empty;
+        var path = Path.Combine(ProjectDir(), "tts",
+            $"muster_{q.Order:D3}_{ContentHash(text)}_{TtsSignature()}.wav");
 
         // Immer neu erzeugen, falls Text vorhanden, aber Datei fehlt.
         if (!File.Exists(path) && !string.IsNullOrWhiteSpace(text))
             await _tts.SpeakToWaveFileAsync(text, path);
 
         return path;
+    }
+
+    /// <summary>
+    /// Kurzer Hash des vorzulesenden Textes. Wird in den Audiodateinamen aufgenommen, damit bei
+    /// geaendertem oder uebersetztem Fragetext (gleiche Reihenfolge-Nummer!) garantiert neues Audio
+    /// erzeugt und niemals eine alte Datei aus dem Cache abgespielt wird.
+    /// </summary>
+    private static string ContentHash(string? text)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(text ?? string.Empty);
+        var hash = System.Security.Cryptography.SHA1.HashData(bytes);
+        return Convert.ToHexString(hash, 0, 5).ToLowerInvariant();
     }
 
     /// <summary>

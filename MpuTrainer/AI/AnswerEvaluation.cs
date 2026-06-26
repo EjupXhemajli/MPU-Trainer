@@ -46,11 +46,14 @@ public class AnswerEvaluationService : IAnswerEvaluationService
 {
     private readonly IAiClientFactory _factory;
     private readonly ISettingsService _settings;
+    private readonly IKnowledgeBaseService _knowledge;
 
-    public AnswerEvaluationService(IAiClientFactory factory, ISettingsService settings)
+    public AnswerEvaluationService(IAiClientFactory factory, ISettingsService settings,
+        IKnowledgeBaseService knowledge)
     {
         _factory = factory;
         _settings = settings;
+        _knowledge = knowledge;
     }
 
     public async Task<AnswerEvaluation> EvaluateAsync(
@@ -59,11 +62,15 @@ public class AnswerEvaluationService : IAnswerEvaluationService
         var client = _factory.Create();
         var temp = Math.Min(_settings.Current.Temperature, 0.4);
 
+        // Fachliche Wissensbasis (Skills + Dokumente) einbinden -> psychologisch fundierte Auswertung.
+        var knowledge = _knowledge.BuildContext(60000);
+        var system = MpuPrompts.BuildEvaluationSystem(knowledge);
+
         var prompt = MpuPrompts.BuildEvaluationPrompt(
             project.LeitfadenText, question.Text, question.ModelAnswer ?? string.Empty,
             transcript, project.Language);
 
-        var raw = await client.CompleteAsync(MpuPrompts.EvaluationSystem, prompt, temp, 1500, ct);
+        var raw = await client.CompleteAsync(system, prompt, temp, 1500, ct);
 
         var result = Parse(raw);
 

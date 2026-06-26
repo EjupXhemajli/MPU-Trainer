@@ -93,6 +93,11 @@ public partial class App : Application
 
         // Zuletzt geoeffnetes Projekt nach dem Anzeigen im Hintergrund laden (blockiert den Start nicht).
         _ = RestoreLastProjectAsync();
+
+        // Begruessung (Melodie + Stimme) im Hintergrund abspielen; Fehler sind unkritisch.
+        var welcome = _services.GetService<IWelcomeService>();
+        if (welcome is not null)
+            _ = Task.Run(welcome.PlayAsync);
     }
 
     /// <summary>
@@ -160,11 +165,13 @@ public partial class App : Application
         services.AddTransient<IAudioRecorder, AudioRecorder>();
 
         services.AddSingleton<IDocumentExtractionService, DocumentExtractionService>();
+        services.AddSingleton<IKnowledgeBaseService, KnowledgeBaseService>();
         services.AddSingleton<IAiClientFactory, AiClientFactory>();
         services.AddSingleton<IQuestionGenerationService, QuestionGenerationService>();
         services.AddSingleton<ITranscriptionService, OpenAiTranscriptionService>();
         services.AddSingleton<IAnswerEvaluationService, AnswerEvaluationService>();
         services.AddSingleton<IWordExportService, WordExportService>();
+        services.AddSingleton<IWelcomeService, WelcomeService>();
 
         // ViewModels.
         services.AddSingleton<MainViewModel>();

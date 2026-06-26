@@ -25,6 +25,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly IAiClientFactory _aiFactory;
     private readonly IDialogService _dialog;
     private readonly IThemeService _theme;
+    private readonly IKnowledgeBaseService _knowledge;
 
     private readonly List<TtsVoice> _elevenVoices = new();
     private string _selectedBackgroundKey = "neutral";
@@ -33,6 +34,10 @@ public partial class SettingsViewModel : ViewModelBase
     public ObservableCollection<AudioDevice> Speakers { get; } = new();
     public ObservableCollection<string> Voices { get; } = new();
     public ObservableCollection<BackgroundOption> Backgrounds { get; } = new();
+
+    /// <summary>Wissensbasis: hinterlegte Skills und Dokumente.</summary>
+    public ObservableCollection<KnowledgeItemVm> KnowledgeItems { get; } = new();
+    [ObservableProperty] private string _knowledgeSummary = string.Empty;
 
     public IReadOnlyList<AiProvider> Providers { get; } =
         (AiProvider[])Enum.GetValues(typeof(AiProvider));
@@ -63,12 +68,16 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _testStatus = string.Empty;
     [ObservableProperty] private bool _isBusy;
 
+    /// <summary>Begruessung beim Programmstart abspielen.</summary>
+    [ObservableProperty] private bool _playWelcomeOnStartup = true;
+
     /// <summary>True, wenn ElevenLabs gewaehlt ist (steuert Sichtbarkeit von "Stimmen laden").</summary>
     public bool IsElevenLabs => SelectedTtsProvider == TtsProvider.ElevenLabs;
 
     public SettingsViewModel(ISettingsService settings, ISecretStore secrets,
         IAudioDeviceService devices, ITtsService tts, IAudioPlayer player,
-        IAiClientFactory aiFactory, IDialogService dialog, IThemeService theme)
+        IAiClientFactory aiFactory, IDialogService dialog, IThemeService theme,
+        IKnowledgeBaseService knowledge)
     {
         _settings = settings;
         _secrets = secrets;
@@ -78,18 +87,21 @@ public partial class SettingsViewModel : ViewModelBase
         _aiFactory = aiFactory;
         _dialog = dialog;
         _theme = theme;
+        _knowledge = knowledge;
 
         LoadFromSettings();
         RefreshDevices();
         ApplyDeviceSelection();
         LoadVoicesForProvider();
         BuildBackgrounds();
+        LoadKnowledge();
     }
 
     private void LoadFromSettings()
     {
         var s = _settings.Current;
         Volume = s.Volume;
+        PlayWelcomeOnStartup = s.PlayWelcomeOnStartup;
 
         OpenAiModel = string.IsNullOrWhiteSpace(s.OpenAiTtsModel) ? "tts-1-hd" : s.OpenAiTtsModel;
         PremiumApiKey = _secrets.Load("tts") ?? string.Empty;
@@ -295,6 +307,72 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    // ---- Wissensbasis (Skills & Dokumente) ----------------------------
+
+    private const string KnowledgeFilter =
+        "Unterstuetzte Dateien|*.docx;*.pdf;*.txt;*.md;*.markdown;*.csv;*.tsv;*.json;*.jsonl;*.xml;*.yaml;*.yml;*.log;*.htm;*.html|Alle Dateien|*.*";
+
+    [RelayCommand]
+    private void AddSkill() => AddKnowledge(KnowledgeKind.Skill);
+
+    [RelayCommand]
+    private void AddDocument() => AddKnowledge(KnowledgeKind.Dokument);
+
+    private void AddKnowledge(KnowledgeKind kind)
+    {
+        var title = kind == KnowledgeKind.Skill
+            ? "Skill-Dateien auswaehlen (z. B. DIAGNOSTIKER.md)"
+            : "Dokumente / Datenbank auswaehlen (Word, PDF, JSON, ...)";
+
+        var files = _dialog.OpenFiles(KnowledgeFilter, title);
+        if (files.Length == 0) return;
+
+        int added = 0;
+        var errors = new List<string>();
+        foreach (var f in files)
+        {
+            try { _knowledge.Add(f, kind); added++; }
+            catch (Exception ex) { errors.Add($"{Path.GetFileName(f)}: {ex.Message}"); }
+        }
+
+        LoadKnowledge();
+
+        if (errors.Count > 0)
+            _dialog.Error($"{added} Datei(en) hinzugefuegt. Nicht moeglich:\n\n" + string.Join("\n", errors));
+    }
+
+    [RelayCommand]
+    private void RemoveKnowledge(KnowledgeItemVm? item)
+    {
+        if (item is null) return;
+        if (!_dialog.Confirm($"„{item.FileName}\" aus der Wissensbasis entfernen?")) return;
+        _knowledge.Remove(item.Id);
+        LoadKnowledge();
+    }
+
+    private void LoadKnowledge()
+    {
+        KnowledgeItems.Clear();
+        var items = _knowledge.List();
+        foreach (var it in items)
+        {
+            var id = it.Id;
+            KnowledgeItems.Add(new KnowledgeItemVm(it, enabled => _knowledge.SetEnabled(id, enabled)));
+        }
+
+        if (items.Count == 0)
+        {
+            KnowledgeSummary = "Noch keine Skills oder Dokumente hinterlegt.";
+            return;
+        }
+
+        int active = items.Count(i => i.Enabled);
+        int chars = items.Where(i => i.Enabled).Sum(i => i.CharCount);
+        KnowledgeSummary =
+            $"{items.Count} Eintrag/Eintraege, davon {active} aktiv · rund {chars / 1000.0:0.#} Tsd. Zeichen " +
+            "fliessen in die Auswertung ein.";
+    }
+
     [RelayCommand]
     private void Save()
     {
@@ -303,6 +381,7 @@ public partial class SettingsViewModel : ViewModelBase
         s.SpeakerId = SelectedSpeaker?.Id;
         s.Volume = Volume;
         s.BackgroundTheme = _selectedBackgroundKey;
+        s.PlayWelcomeOnStartup = PlayWelcomeOnStartup;
 
         // Sprachausgabe
         s.TtsProvider = SelectedTtsProvider;
@@ -356,4 +435,31 @@ public partial class SettingsViewModel : ViewModelBase
         Temperature = Temperature,
         MaxTokens = MaxTokens
     };
+}
+
+/// <summary>Anzeige-Wrapper fuer einen Wissensbasis-Eintrag (Name, Art, Groesse, Ein/Aus-Schalter).</summary>
+public partial class KnowledgeItemVm : ObservableObject
+{
+    private readonly System.Action<bool> _onToggle;
+
+    public string Id { get; }
+    public string FileName { get; }
+    public string KindLabel { get; }
+    public string SizeLabel { get; }
+
+    [ObservableProperty] private bool _enabled;
+
+    public KnowledgeItemVm(KnowledgeItem item, System.Action<bool> onToggle)
+    {
+        _onToggle = onToggle;
+        Id = item.Id;
+        FileName = item.FileName;
+        KindLabel = item.Kind == KnowledgeKind.Skill ? "Skill" : "Dokument";
+        SizeLabel = item.CharCount >= 1000
+            ? $"{item.CharCount / 1000.0:0.#} Tsd. Zeichen"
+            : $"{item.CharCount} Zeichen";
+        _enabled = item.Enabled;
+    }
+
+    partial void OnEnabledChanged(bool value) => _onToggle(value);
 }

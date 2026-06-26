@@ -33,6 +33,59 @@ public class QuestionGenerationService : IQuestionGenerationService
     public async Task<List<GeneratedQuestion>> GenerateQuestionsAsync(
         string leitfaden, int count, QuestionCategory focus, string language, CancellationToken ct = default)
     {
+        count = Math.Clamp(count, 1, 80);
+        const int batchSize = 20;
+
+        // Kleine Mengen in einem Aufruf. Grosse Mengen passen nicht in ein einzelnes
+        // Ausgabelimit (deshalb kamen frueher nie mehr als ~50 zustande) -> in Stapeln erzeugen.
+        if (count <= batchSize)
+            return await GenerateOnceAsync(leitfaden, count, focus, language, null, ct);
+
+        var all = new List<GeneratedQuestion>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int rounds = 0;
+        int maxRounds = (count / batchSize) + 4;
+
+        while (all.Count < count && rounds < maxRounds)
+        {
+            rounds++;
+            int remaining = count - all.Count;
+            int batch = Math.Min(batchSize, remaining);
+            var avoid = all.Count > 0 ? all.ConvertAll(q => q.Text) : null;
+
+            List<GeneratedQuestion> got;
+            try
+            {
+                got = await GenerateOnceAsync(leitfaden, batch, focus, language, avoid, ct);
+            }
+            catch when (all.Count > 0)
+            {
+                // Schon Fragen erzeugt -> mit dem Vorhandenen abschliessen statt komplett zu scheitern.
+                break;
+            }
+
+            int added = 0;
+            foreach (var g in got)
+            {
+                var key = NormalizeKey(g.Text);
+                if (key.Length == 0 || !seen.Add(key)) continue;
+                all.Add(g);
+                added++;
+                if (all.Count >= count) break;
+            }
+
+            // Keine neuen, nicht doppelten Fragen mehr -> das Thema ist ausgeschoepft.
+            if (added == 0) break;
+        }
+
+        return all;
+    }
+
+    /// <summary>Ein einzelner Generierungsaufruf (optional unter Vermeidung bereits vorhandener Fragen).</summary>
+    private async Task<List<GeneratedQuestion>> GenerateOnceAsync(
+        string leitfaden, int count, QuestionCategory focus, string language,
+        IReadOnlyList<string>? avoid, CancellationToken ct)
+    {
         var client = _factory.Create();
         var temp = _settings.Current.Temperature;
 
@@ -41,7 +94,7 @@ public class QuestionGenerationService : IQuestionGenerationService
         // mit kleinerem Ausgabelimit nicht mit einer Fehlermeldung abbrechen.
         int maxTokens = Math.Min(8000, Math.Max(_settings.Current.MaxTokens, count * 320 + 800));
 
-        var prompt = MpuPrompts.BuildQuestionPrompt(leitfaden, count, focus, language);
+        var prompt = MpuPrompts.BuildQuestionPrompt(leitfaden, count, focus, language, avoid);
         var raw = await client.CompleteAsync(MpuPrompts.System, prompt, temp, maxTokens, ct);
 
         var parsed = ParseQuestions(raw);
@@ -59,6 +112,19 @@ public class QuestionGenerationService : IQuestionGenerationService
         }
 
         return parsed;
+    }
+
+    /// <summary>Vereinheitlicht Fragetexte fuer den Doppel-Vergleich (Kleinschreibung, nur Wortzeichen).</summary>
+    private static string NormalizeKey(string text)
+    {
+        var sb = new System.Text.StringBuilder(text.Length);
+        bool space = false;
+        foreach (var ch in text.Trim().ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(ch)) { sb.Append(ch); space = false; }
+            else if (!space) { sb.Append(' '); space = true; }
+        }
+        return sb.ToString().Trim();
     }
 
     private static string Snippet(string s)

@@ -21,7 +21,8 @@ public static class MpuPrompts
     /// Prompt zur Fragegenerierung. Erwartet als Antwort ausschliesslich ein
     /// JSON-Array von Objekten mit den Feldern frage, kategorie, schwierigkeit, musterantwort.
     /// </summary>
-    public static string BuildQuestionPrompt(string leitfaden, int count, QuestionCategory focus, string language)
+    public static string BuildQuestionPrompt(string leitfaden, int count, QuestionCategory focus, string language,
+        IReadOnlyList<string>? avoid = null)
     {
         var focusText = focus == QuestionCategory.Allgemein
             ? "Decke die im Leitfaden erkennbaren Themen ausgewogen ab."
@@ -29,6 +30,25 @@ public static class MpuPrompts
               $"Jede einzelne Frage muss sich konkret auf diesen Schwerpunkt beziehen, und das Feld " +
               $"\"kategorie\" ist fuer alle Fragen passend zu diesem Schwerpunkt zu setzen. " +
               $"Andere Aspekte nur, wenn sie diesen Schwerpunkt unmittelbar stuetzen.";
+
+        // Bereits vorhandene Fragen auflisten, damit ein weiterer Stapel nur NEUE Fragen liefert.
+        var avoidText = string.Empty;
+        if (avoid is { Count: > 0 })
+        {
+            var items = new List<string>();
+            foreach (var a in avoid)
+            {
+                if (string.IsNullOrWhiteSpace(a)) continue;
+                var t = a.Trim();
+                items.Add("- " + (t.Length > 140 ? t[..140] : t));
+                if (items.Count >= 40) break;
+            }
+            if (items.Count > 0)
+                avoidText =
+                    "\n\nDie folgenden Fragen EXISTIEREN BEREITS. Erzeuge ausschliesslich NEUE, " +
+                    "inhaltlich deutlich andere Fragen und wiederhole oder paraphrasiere diese NICHT:\n" +
+                    string.Join("\n", items) + "\n";
+        }
 
         var categories = string.Join(", ",
             "Alkohol", "Drogen", "Verkehrsdelikte", "Straftaten", "Konsumvorgeschichte",
@@ -39,7 +59,7 @@ public static class MpuPrompts
 
         return
             $"Erzeuge genau {count} MPU-Trainingsfragen auf Basis des folgenden Beratungs-Leitfadens.\n" +
-            $"{focusText}\n\n" +
+            $"{focusText}{avoidText}\n\n" +
             $"WICHTIG: Formuliere die Fragen (Feld \"frage\") UND die Musterantworten (Feld \"musterantwort\") " +
             $"ausschliesslich in folgender Sprache: {lang}. Die Werte fuer \"kategorie\" und " +
             $"\"schwierigkeit\" bleiben unveraendert in der unten vorgegebenen Form.\n\n" +
@@ -81,9 +101,35 @@ public static class MpuPrompts
     public const string EvaluationSystem =
         "Du bist ein erfahrener Verkehrspsychologe und MPU-Gutachter. Du vergleichst die geuebte " +
         "Antwort eines Klienten mit einer vorgegebenen Musterantwort und bewertest, ob der Klient " +
-        "die Kernaussagen verstanden und getroffen hat. Du bist fachlich, ehrlich und konstruktiv. " +
-        "Du bewertest ausschliesslich das, was der Klient tatsaechlich gesagt hat (das Transkript), " +
-        "und erfindest nichts hinzu.";
+        "die Kernaussagen SINNGEMAESS verstanden und getroffen hat. Es geht ausschliesslich um den " +
+        "INHALT und die Bedeutung, nicht um den genauen Wortlaut: Eine Antwort ist auch dann richtig, " +
+        "wenn sie voellig anders formuliert ist als die Musterantwort, solange die inhaltlichen " +
+        "Kernpunkte sinngemaess vorkommen. Du bist fachlich, ehrlich und konstruktiv. Du bewertest " +
+        "ausschliesslich das, was der Klient tatsaechlich gesagt hat (das Transkript), und erfindest nichts hinzu.";
+
+    /// <summary>
+    /// Baut den Systemkontext fuer die Auswertung und bindet – falls vorhanden – die fachliche
+    /// Wissensbasis (Skills/Methodik wie DIAGNOSTIKER und Dokumente wie die BK-5-Kriterien) als
+    /// massgeblichen Rahmen ein, damit die Beurteilung psychologisch fundiert erfolgt.
+    /// </summary>
+    public static string BuildEvaluationSystem(string? knowledge)
+    {
+        if (string.IsNullOrWhiteSpace(knowledge))
+            return EvaluationSystem;
+
+        return EvaluationSystem +
+            "\n\nDir steht zusaetzlich die folgende FACHLICHE WISSENSBASIS zur Verfuegung. Sie enthaelt " +
+            "SKILLS (verbindliche Arbeitsanweisungen und Methodik, z. B. verkehrspsychologische " +
+            "Fallanalyse) und DOKUMENTE (Nachschlagewerke wie die Beurteilungskriterien BK 5). Wende sie " +
+            "als massgeblichen fachlichen Rahmen an: Beurteile die Antwort wie ein erfahrener " +
+            "Verkehrspsychologe und Gutachter nach diesen Vorgaben – also nicht nur als Abgleich mit der " +
+            "Musterantwort, sondern auch hinsichtlich einschlaegiger BK-5-Hypothesen und -Kriterien, " +
+            "Indikatoren und Kontraindikatoren, Verantwortungsuebernahme, Aufarbeitungstiefe, " +
+            "Ursachenverstaendnis und Rueckfallprophylaxe. Stuetze dich auf den Wortlaut der Dokumente; " +
+            "erfinde keine Kriterien, Nummern oder Seitenzahlen. Widerspricht die Wissensbasis einer " +
+            "allgemeinen Einschaetzung, hat die Wissensbasis Vorrang.\n\n" +
+            "===== BEGINN WISSENSBASIS =====\n" + knowledge + "\n===== ENDE WISSENSBASIS =====";
+    }
 
     /// <summary>
     /// Prompt zur Auswertung einer Klientenantwort im Vergleich zur Musterantwort. Erwartet als
@@ -98,15 +144,20 @@ public static class MpuPrompts
         return
             "Vergleiche die folgende Antwort eines Klienten aus einer MPU-Vorbereitung mit der " +
             "vorgegebenen Musterantwort und beurteile sie.\n\n" +
+            "GRUNDREGEL: Bewerte ausschliesslich SINNGEMAESS nach Inhalt und Bedeutung, NICHT nach " +
+            "der Wortwahl oder Formulierung. Andere Worte, andere Reihenfolge, andere Beispiele oder " +
+            "Umgangssprache sind voellig in Ordnung, solange die inhaltlichen Kernpunkte getroffen " +
+            "werden. Bestrafe NICHT, dass der Klient etwas anders formuliert als die Musterantwort. " +
+            "Entscheidend ist allein, ob die wesentlichen Aussagen sinngemaess enthalten sind.\n\n" +
             "Beantworte dabei genau drei Punkte:\n" +
-            "1. KERNUEBEREINSTIMMUNG: Stimmt die Antwort des Klienten im Kern mit der Musterantwort " +
-            "ueberein? Beginne mit einem klaren Urteil (Ja / Teilweise / Nein) und begruende es kurz.\n" +
-            "2. ABWEICHUNGEN: Was war falsch oder weicht inhaltlich von der Musterantwort ab?\n" +
+            "1. KERNUEBEREINSTIMMUNG: Trifft die Antwort des Klienten die Musterantwort inhaltlich/" +
+            "sinngemaess im Kern? Beginne mit einem klaren Urteil (Ja / Teilweise / Nein) und begruende es kurz.\n" +
+            "2. ABWEICHUNGEN: Welche INHALTLICHEN Kernpunkte fehlen oder sind sachlich falsch? " +
+            "(Reine Formulierungsunterschiede zaehlen hier NICHT als Abweichung.)\n" +
             "3. NICHT VERSTANDEN: Was hat der Klient im Kern noch nicht verstanden (z. B. Einsicht, " +
             "Ursachen, Verantwortung, Verhaltensaenderung, Rueckfallvermeidung)?\n" +
             "Gib ausserdem konkrete, umsetzbare Verbesserungsvorschlaege.\n\n" +
-            "Bewerte am Inhalt, nicht an der genauen Wortwahl. Wenn die Antwort sehr kurz, leer oder " +
-            "am Thema vorbei ist, sage das ehrlich.\n\n" +
+            "Wenn die Antwort sehr kurz, leer oder am Thema vorbei ist, sage das ehrlich.\n\n" +
             $"WICHTIG: Formuliere die gesamte Rueckmeldung ausschliesslich in folgender Sprache: {lang}.\n\n" +
             "Antworte AUSSCHLIESSLICH mit einem gueltigen JSON-Objekt, ohne weiteren Text, ohne Markdown " +
             "und ohne Code-Zaeune. Schema:\n" +
