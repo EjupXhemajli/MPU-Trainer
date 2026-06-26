@@ -166,7 +166,6 @@ public partial class App : Application
 
         services.AddSingleton<IDocumentExtractionService, DocumentExtractionService>();
         services.AddSingleton<IKnowledgeBaseService, KnowledgeBaseService>();
-        services.AddSingleton<IGutachterCaseStore, GutachterCaseStore>();
         services.AddSingleton<IAiClientFactory, AiClientFactory>();
         services.AddSingleton<IQuestionGenerationService, QuestionGenerationService>();
         services.AddSingleton<ITranscriptionService, OpenAiTranscriptionService>();
@@ -180,7 +179,6 @@ public partial class App : Application
         services.AddTransient<DocumentUploadViewModel>();
         services.AddTransient<QuestionsViewModel>();
         services.AddTransient<TrainingViewModel>();
-        services.AddTransient<GutachterViewModel>();
         services.AddTransient<SettingsViewModel>();
 
         services.AddSingleton<MainWindow>();

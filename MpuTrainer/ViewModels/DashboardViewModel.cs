@@ -42,10 +42,6 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private string _selectedLanguage = "Deutsch";
 
-    /// <summary>Steuert die Hauptmaske: false = Moduswahl, true = Trainings-Setup-Formular.</summary>
-    [ObservableProperty]
-    private bool _showTrainingSetup;
-
     public IReadOnlyList<QuestionCategory> Categories { get; } =
         (QuestionCategory[])Enum.GetValues(typeof(QuestionCategory));
 
@@ -78,20 +74,6 @@ public partial class DashboardViewModel : ViewModelBase
             _dialog.Error($"Projekte konnten nicht geladen werden: {ex.Message}");
         }
     }
-
-    // ---- Moduswahl auf der Hauptmaske ---------------------------------
-
-    /// <summary>Trainingsmodus gewaehlt: Setup-Formular fuer ein Trainingsprojekt anzeigen.</summary>
-    [RelayCommand]
-    private void ChooseTraining() => ShowTrainingSetup = true;
-
-    /// <summary>Begutachtung gewaehlt: in den Gutachter-Modus wechseln.</summary>
-    [RelayCommand]
-    private void ChooseBegutachtung() => _navigation.NavigateTo<GutachterViewModel>();
-
-    /// <summary>Zurueck von Setup zur Moduswahl.</summary>
-    [RelayCommand]
-    private void BackToChoice() => ShowTrainingSetup = false;
 
     private bool CanCreate() =>
         !string.IsNullOrWhiteSpace(FirstName) &&
